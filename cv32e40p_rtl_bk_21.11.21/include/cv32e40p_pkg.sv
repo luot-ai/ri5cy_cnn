@@ -53,7 +53,17 @@ package cv32e40p_pkg;
   parameter OPCODE_STORE_FP = 7'h27;
   parameter OPCODE_LOAD_FP = 7'h07;
   parameter OPCODE_AMO = 7'h2F;
+
+  //custom cnn
   parameter OPCODE_CUSTCNN = 7'h6b;
+  parameter OPCODE_LDTILE  = 3'd0;
+  parameter OPCODE_AAMUL   = 3'd1;
+  parameter OPCODE_TRIADD  = 3'd2;
+  parameter OPCODE_OACC    = 3'd3;
+  parameter OPCODE_WBTILE  = 3'd4;
+  parameter OPCODE_MTFCR   = 3'd5;
+  parameter OPCODE_CPAD    = 3'd6;
+  parameter OPCODE_MAXF    = 3'd7;
 
   //test_tag_con
   //test_tag_mac

@@ -119,7 +119,23 @@ module cv32e40p_decoder import cv32e40p_pkg::*; import cv32e40p_apu_core_pkg::*;
   output logic        regfile_alu_waddr_sel_o, // Select register write address for ALU/MUL operations
 
   // cnn vector regfile
-  output logic        cnn_vec_reg_wen,        // write enable for custom veccnn reg
+  output logic [3:0]  cnn_vec_reg_wen,        // write enable for custom veccnn reg
+  output logic        cus_add1_4_up,
+
+  output logic        cus_add1_1_down,
+  output logic [1:0]       cus_add1_2_down,
+  output logic [1:0]  cus_add1_3_down,
+  output logic [1:0]  cus_add1_4_down,
+
+  output logic        cus_add2_1_up,
+  output logic        cus_add2_2_up,
+  output logic        cus_add2_3_up,
+  output logic        cus_add2_4_up,
+
+  output logic [1:0]  cus_add2_1_down,
+  output logic   cus_add2_2_down,
+  output logic [1:0]  cus_add2_3_down,
+  output logic   cus_add2_4_down,
 
   // CSR manipulation
   output logic        csr_access_o,            // access to CSR
@@ -177,7 +193,24 @@ module cv32e40p_decoder import cv32e40p_pkg::*; import cv32e40p_apu_core_pkg::*;
   logic [2:0] hwlp_we;
   logic       csr_illegal;
   logic [1:0] ctrl_transfer_insn;
-  logic       cnnVecRegWen;
+
+  //custom for cnn
+  logic [3:0] cnnVecRegWen;
+  logic        cusAdd1_4_up,
+  logic        cusAdd1_1_down,
+  logic [1:0]  cusAdd1_2_down,
+  logic [1:0]  cusAdd1_3_down,
+  logic [1:0]  cusAdd1_4_down,
+
+  logic        cusAdd2_1_up,
+  logic        cusAdd2_2_up,
+  logic        cusAdd2_3_up,
+  logic        cusAdd2_4_up,
+
+  logic [1:0]  cusAdd2_1_down,
+  logic        cusAdd2_2_down,
+  logic [1:0]  cusAdd2_3_down,
+  logic        cusAdd2_4_down,
 
   csr_opcode_e csr_op;
 
@@ -209,6 +242,23 @@ module cv32e40p_decoder import cv32e40p_pkg::*; import cv32e40p_apu_core_pkg::*;
   begin
     ctrl_transfer_insn          = BRANCH_NONE;
     ctrl_transfer_target_mux_sel_o       = JT_JAL;
+
+    cnnVecRegWen                = 4'b0000;
+    cusAdd1_4_up                = 1'b1;
+
+    cusAdd1_1_down              = 1'b1;
+    cusAdd1_2_down              = 2'b11;
+
+    cusAdd2_3_up                = 1'b1;
+    cusAdd2_4_up                = 1'b1;
+
+    cusAdd1_3_down              = 2'b11;
+    cusAdd1_4_down              = 2'b11;
+
+    cusAdd2_1_down              = 2'b11;
+    cusAdd2_2_down              = 1'b1;
+    cusAdd2_3_down              = 2'b11;
+    cusAdd2_4_down              = 1'b1;
 
     alu_en                      = 1'b1;
     alu_operator_o              = ALU_SLTU;
@@ -318,7 +368,43 @@ module cv32e40p_decoder import cv32e40p_pkg::*; import cv32e40p_apu_core_pkg::*;
 
       OPCODE_CUSTCNN: begin   // Custom instruction for CNN
         if (CUSTOM_CNN) begin
+          cnnVecRegWen = 4'b1111;
+          unique case (instr_rdata_i[27:25])
+            OPCODE_LDTILE:begin
+              
+            end
+            OPCODE_AAMUL:begin
+              cusAdd1_1_down=instr_rdata_i[11:7]==5'd8?1:0;
+              cusAdd1_2_down=instr_rdata_i[11:7]==5'd8?2'b11:2'b01;
+              cusAdd1_3_down=instr_rdata_i[11:7]==5'd8?2'b11:2'b01;
+              cusAdd1_4_down=instr_rdata_i[11:7]==5'd8?2'b11:2'b01;
 
+              cusAdd2_4_up=0;
+              cusAdd2_1_down=2'b01;
+              cusAdd2_2_down=0;
+              cusAdd2_3_down=2'b01;
+              cusAdd2_4_down=0;              
+            end
+            OPCODE_TRIADD:begin
+              cusAdd2_1_up=instr_rdata_i[15]?0:1;
+              cusAdd2_2_up=instr_rdata_i[15]?0:1;
+              cusAdd2_3_up=instr_rdata_i[15]?0:1;
+              cusAdd2_4_up=instr_rdata_i[15]?0:1;
+            end
+            OPCODE_OACC:begin
+              cnnVecRegWen = instr_rdata_i[20]?4'b0011:4'b1100;
+              cusAdd1_4_up = 0;
+              cusAdd1_2_down = 0;
+              cusAdd1_3_down=2'b00;
+              cusAdd1_4_down=2'b00;
+              cusAdd2_3_up=0;
+              cusAdd2_1_down=2'b00;
+              cusAdd2_3_down=2'b00;
+            end
+            OPCODE_WBTILE:begin
+              cnnVecRegWen = 4'd0;
+            end
+          endcase
         end
       end
 
@@ -2749,5 +2835,20 @@ module cv32e40p_decoder import cv32e40p_pkg::*; import cv32e40p_apu_core_pkg::*;
 
   assign ctrl_transfer_insn_in_dec_o  = ctrl_transfer_insn;
   assign regfile_alu_we_dec_o         = regfile_alu_we;
+
+  assign cnn_vec_reg_wen              = cnnVecRegWen;
+  assign cus_add1_4_up                =cusAdd1_4_up;
+  assign cus_add1_1_down              =cusAdd1_1_down;
+  assign cus_add1_2_down              =cusAdd1_2_down;
+  assign cus_add1_3_down              =cusAdd1_3_down;
+  assign cus_add1_4_down              =cusAdd1_4_down;
+  assign cus_add2_1_up                =cusAdd2_1_up;
+  assign cus_add2_2_up                =cusAdd2_1_up;
+  assign cus_add2_3_up                =cusAdd2_3_up;
+  assign cus_add2_4_up                =cusAdd2_4_up;
+  assign cus_add2_1_down              =cusAdd2_1_down;
+  assign cus_add2_2_down              =cusAdd2_2_down;
+  assign cus_add2_3_down              =cusAdd2_3_down;
+  assign cus_add2_4_down              =cusAdd2_4_down;
 
 endmodule // cv32e40p_decoder
